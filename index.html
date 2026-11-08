@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bir Yıl</title>
+<style>
+  :root{
+    --bg1:#0a1330; --bg2:#050a1c; --text:#f1ece4; --accent:#e8b4a0; --btn:#d6001c;
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:radial-gradient(ellipse at 50% 30%,var(--bg1),var(--bg2) 75%);
+    color:var(--text);
+    font-family:Georgia,"Times New Roman",serif;
+    overflow:hidden;
+  }
+  canvas{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+  .screen{
+    position:fixed;inset:0;z-index:1;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:24px;text-align:center;
+    opacity:0;pointer-events:none;transition:opacity 1.2s ease;
+  }
+  .screen.active{opacity:1;pointer-events:auto}
+  .card{
+    max-width:640px;width:100%;
+    background:rgba(6,12,34,.55);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:20px;padding:32px 28px;
+    box-shadow:0 20px 60px rgba(0,0,0,.45);
+    max-height:100%;overflow-y:auto;
+  }
+  .line{
+    font-size:clamp(17px,2.4vw,21px);line-height:1.8;margin:0 0 .5em;
+    opacity:0;transform:translateY(10px);
+    transition:opacity 1.6s ease,transform 1.6s ease;
+  }
+  .line.show{opacity:1;transform:none}
+  .q{
+    font-size:clamp(22px,3.4vw,30px);color:var(--accent);margin:1.2em 0 1em;
+    opacity:0;transition:opacity 1.4s ease;
+  }
+  .q.show{opacity:1}
+  .btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;opacity:0;transition:opacity 1.2s ease}
+  .btns.show{opacity:1}
+  button{
+    font:inherit;font-size:18px;color:#fff;cursor:pointer;
+    padding:12px 34px;border-radius:999px;border:1px solid rgba(255,255,255,.25);
+    background:rgba(255,255,255,.07);transition:transform .2s,background .2s;
+  }
+  button:hover{transform:scale(1.06)}
+  button.yes{background:var(--btn);border-color:var(--btn)}
+  .warn{
+    min-height:1.6em;margin-top:18px;color:#ffb3a7;font-size:17px;
+    opacity:0;transition:opacity .4s;
+  }
+  .warn.show{opacity:1}
+  .shake{animation:shake .45s}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+  .video-wrap{
+    width:min(900px,100%);aspect-ratio:16/9;
+    border-radius:16px;overflow:hidden;background:#000;
+    box-shadow:0 20px 70px rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.1);
+  }
+  .video-wrap iframe{width:100%;height:100%;border:0;display:block}
+  .video-note{padding:30px;font-size:17px;line-height:1.6}
+  .video-title{margin:0 0 18px;font-size:clamp(20px,3vw,26px);color:var(--accent)}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+
+<!-- Ekran 1: metin -->
+<section class="screen active" id="s1">
+  <div class="card">
+    <p class="line">Bir yılı geride bırakırken dönüp baktığımda aklımda büyük jestlerden çok, birlikte yaşadığımız küçük anlar kalıyor.</p>
+    <p class="line">Günlük hayatın tüm karmaşası içinde birbirimize iyi gelmek, bazen birlikte çalışmak bazen hiçbir şey konuşmadan yan yana durmak…</p>
+    <p class="line">Birbirimizin en zor, en sabırsız ve en doğal hallerini görmemize rağmen yine de yan yana olmayı seçmek.</p>
+    <p class="line">Sanırım bizim için en değerli olan da tam olarak bu. Nice daha çok birlikte yıllara sevgilim. Seni Çok Seviyorum.</p>
+    <p class="q" id="q">Videoyu izlemeye hazır mısın?</p>
+    <div class="btns" id="btns">
+      <button class="yes" id="yes">Evet</button>
+      <button id="no">Hayır</button>
+    </div>
+    <div class="warn" id="warn">Evete basmalısın 🥤</div>
+  </div>
+</section>
+
+<!-- Ekran 2: video -->
+<section class="screen" id="s2">
+  <h2 class="video-title">İyi seyirler…</h2>
+  <div class="video-wrap" id="vw"></div>
+</section>
+
+<script>
+/* ============ AYAR: YouTube video linkini buraya yapıştır ============ */
+const VIDEO_URL = "https://youtu.be/rlNeOJK3AnQ";
+/* ===================================================================== */
+
+function ytId(u){
+  const m = u.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+/* ---------- Düşen kolalar ---------- */
+const cv = document.getElementById('bg'), cx = cv.getContext('2d');
+let W, H, dpr;
+function resize(){
+  dpr = Math.min(window.devicePixelRatio||1, 2);
+  W = innerWidth; H = innerHeight;
+  cv.width = W*dpr; cv.height = H*dpr;
+  cx.setTransform(dpr,0,0,dpr,0,0);
+}
+addEventListener('resize', resize); resize();
+
+function can(x,y,s,rot,a){
+  cx.save();
+  cx.translate(x,y); cx.rotate(rot); cx.scale(s,s); cx.globalAlpha = a;
+  const w=36,h=72,r=6;
+  // gövde
+  cx.fillStyle = '#d6001c';
+  cx.beginPath(); cx.roundRect(-w/2,-h/2,w,h,r); cx.fill();
+  // üst/alt metal
+  cx.fillStyle = '#c9ced6';
+  cx.beginPath(); cx.roundRect(-w/2+2,-h/2-3,w-4,5,2); cx.fill();
+  cx.beginPath(); cx.roundRect(-w/2+2,h/2-2,w-4,5,2); cx.fill();
+  // beyaz dalga (alt kısım)
+  cx.strokeStyle = 'rgba(255,255,255,.9)'; cx.lineWidth = 2; cx.lineCap = 'round';
+  cx.beginPath();
+  cx.moveTo(-w/2+3,h/2-8);
+  cx.bezierCurveTo(-4,h/2-14,2,h/2-3,w/2-3,h/2-9);
+  cx.stroke();
+  // Coca-Cola yazısı (dikey)
+  cx.save();
+  cx.rotate(-Math.PI/2);
+  cx.font = 'italic 700 15px Georgia,"Times New Roman",serif';
+  cx.textAlign = 'center'; cx.textBaseline = 'middle';
+  cx.lineJoin = 'round';
+  cx.strokeStyle = '#7a0010'; cx.lineWidth = 3;
+  cx.strokeText('Coca-Cola', -3, 0, h-18);
+  cx.fillStyle = '#fff';
+  cx.fillText('Coca-Cola', -3, 0, h-18);
+  cx.restore();
+  // parlama
+  cx.fillStyle = 'rgba(255,255,255,.22)';
+  cx.fillRect(-w/2+3,-h/2+5,3,h-10);
+  cx.restore();
+}
+
+const cans = [];
+function spawn(initial){
+  const depth = Math.random();            // 0 uzak, 1 yakın
+  cans.push({
+    x: Math.random()*W,
+    y: initial ? Math.random()*H : -60,
+    s: .6 + depth*.8,
+    vy: .5 + depth*1.7,
+    rot: Math.random()*6.28,
+    vr: (Math.random()-.5)*.025,
+    sway: Math.random()*6.28,
+    a: .25 + depth*.55
+  });
+}
+const COUNT = Math.max(14, Math.min(34, Math.round(W/45)));
+for(let i=0;i<COUNT;i++) spawn(true);
+
+function loop(){
+  cx.clearRect(0,0,W,H);
+  cans.sort((a,b)=>a.s-b.s);
+  for(const c of cans){
+    c.y += c.vy; c.rot += c.vr; c.sway += .01;
+    c.x += Math.sin(c.sway)*.35;
+    can(c.x,c.y,c.s,c.rot,c.a);
+  }
+  for(let i=cans.length-1;i>=0;i--){
+    if(cans[i].y > H+80){ cans.splice(i,1); spawn(false); }
+  }
+  requestAnimationFrame(loop);
+}
+if(!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h){ this.rect(x,y,w,h); };
+}
+loop();
+
+/* ---------- Metin akışı ---------- */
+const lines = [...document.querySelectorAll('.line')];
+const q = document.getElementById('q'), btns = document.getElementById('btns');
+let t = 800;
+lines.forEach(l=>{ setTimeout(()=>l.classList.add('show'), t); t += 3200; });
+setTimeout(()=>q.classList.add('show'), t + 300);
+setTimeout(()=>btns.classList.add('show'), t + 1500);
+
+/* ---------- Butonlar ---------- */
+const warn = document.getElementById('warn');
+document.getElementById('no').addEventListener('click', ()=>{
+  warn.classList.add('show');
+  const card = document.querySelector('#s1 .card');
+  card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+});
+
+document.getElementById('yes').addEventListener('click', ()=>{
+  const id = ytId(VIDEO_URL);
+  const vw = document.getElementById('vw');
+  if(id){
+    vw.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1&rel=0&modestbranding=1" title="Video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>';
+  }else{
+    vw.innerHTML = '<div class="video-note">Video linki henüz eklenmedi.</div>';
+  }
+  document.getElementById('s1').classList.remove('active');
+  setTimeout(()=>document.getElementById('s2').classList.add('active'), 700);
+});
+</script>
+</body>
+</html>
